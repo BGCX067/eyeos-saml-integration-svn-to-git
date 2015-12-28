@@ -1,0 +1,87 @@
+
+= 1. Simplesamlphp lib =
+
+== 1.1 Prerequisites ==
+
+ * PHP version >= 5.2.0.
+ * Suppoort for the following PHP extensions:
+  * Always required: date, dom, hash, libxml, openssl, pcre, SPL, zlib
+
+== 1.2 Download and install simpleSAMLphp ==
+
+ * Download and install simpleSAMLphp into your system
+ * The default location is'''/var/saml'''
+
+
+== 1.3 Configuring Apache ==
+
+ * Find the Apache configuration file for the virtual hosts where you want to run simpleSAMLphp.
+
+= 2. Patch eyeOS =
+
+== 2.1 Download ==
+
+'''SVN'''
+
+{{{
+svn co svn checkout http://eyeos-saml-integration.googlecode.com/svn/trunk/apps eyeos-saml-integration-read-only
+svn co svn checkout http://eyeos-saml-integration.googlecode.com/svn/trunk/modules eyeos-saml-integration-read-only
+svn co svn checkout http://eyeos-saml-integration.googlecode.com/svn/trunk/browser eyeos-saml-integration-read-only
+}}}
+
+'''TAR'''
+
+{{{
+http://eyeos-saml-integration.googlecode.com/svn/trunk/download/
+}}}
+
+ * You can download archive file you want to install
+
+== 2.2 patch eyeOS ==
+
+ * Please make sure your eyeOS version is 1.9
+ * Overwrite eyeLogin app
+ * Overwrite browser/index.php
+ * Add a new User manager module (copy saml20.eyecode file to ~/system/services/um/modules/)
+
+== 2.3 Configuring eyeOS ==
+
+'''index.php'''
+
+ * Go to the root of eyeos directory
+ * Add definition of simplesamlphp library into index.php.
+
+find function of libraryLoading :
+{{{
+function libraryLoading(){
+	//Loading the Error Codes
+	reqLib('errorCodes','loadCodes');
+	//load pear library class
+	reqLib('eyePear','loadPear');
+}
+}}}
+
+Add 
+
+{{{
+        include_once("/var/simplesamlphp/lib/_autoload.php");
+}}}
+
+
+'''setting.php'''
+
+ * Open the "setting.php" file and find UM module configuration
+
+please change um module to '''saml20''':
+
+{{{
+//um module to use
+define('UM_MODULE','saml20');
+}}}
+
+
+== 2.4 testing ==
+
+ If you success to patch eyeOS, you will see a new portal page of eyeOS.
+
+

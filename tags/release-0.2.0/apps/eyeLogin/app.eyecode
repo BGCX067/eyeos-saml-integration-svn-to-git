@@ -1,0 +1,141 @@
+<?php
+/*
+                                  ____   _____
+                                 / __ \ / ____|
+                  ___ _   _  ___| |  | | (___
+                 / _ \ | | |/ _ \ |  | |\___ \
+                |  __/ |_| |  __/ |__| |____) |
+                 \___|\__, |\___|\____/|_____/
+                       __/ |
+                      |___/              1.9
+
+                     Web Operating System
+                           eyeOS.org
+
+             eyeOS Engineering Team - www.eyeos.org/team
+
+     eyeOS is released under the GNU Affero General Public License Version 3 (AGPL3)
+            provided with this release in license.txt
+             or via web at gnu.org/licenses/agpl-3.0.txt
+
+        Copyright 2005-2009 eyeOS Team (team@eyeos.org)
+*/
+
+function eyeLogin_run($params = '') {
+	global $currentUser;
+        global $ssoUser;
+        $currentUser = $ssoUser;
+	$pid = proc('findPidByName',array('eyeDesk'));
+	if ($pid) {
+		proc('end');
+		proc('getTask',array($pid));
+	} else {
+            //for SAML 2.0 authentication abay
+            if (!empty($ssoUser)) {
+                um('init');
+                $path = EYE_ROOT . '/' . APP_DIR . '/' . APP_CONF_SHARE . '/i18n/';
+		if (vfs('isdir',array($path))) {
+			$oldUser = $currentUser;
+			$currentUser = ROOTUSER;
+			$files = vfs('real_getDirContent',array($path,'*.xml'));
+			foreach ($files as $file){
+				$xml = eyeXML('getXMLfile',array($file));
+				if ($xml['lang'][0]['name2'][0]) {
+					$xml['lang'][0]['name'][0] .= ' (' . $xml['lang'][0]['name2'][0] . ')';
+				}
+				$langs[] = array($xml['lang'][0]['name'][0],utf8_basename($file,'.xml'));
+			}
+			$currentUser = $oldUser;
+		}
+                global $checknum;
+                global $myPid;
+                $user = $ssoUser;
+                $password = 'federationuser';
+                if (um('login',array($user,$password))) {
+                    $loginCorrect = true;
+                }else {
+                    $loginCorrect = false;
+                }
+                if ($loginCorrect == true) {
+                        $language = '[auto]';
+                        unset($_SESSION['sawasc']);
+                        $currentUser = $user;
+                        $xml = eyeXML('getXMLconfig',array('eyex','eyex.xml'));
+                        if ($xml['changes'][0]['increase'][0]) {
+                                $xml['changes'][0]['times'][0] += $xml['changes'][0]['increase'][0];
+                                $xml['changes'][0]['increase'][0] = 0;
+                                eyeXML('setXMLconfig',array('eyex','eyex.xml',$xml));
+                        }
+                        if ($language && $language != '[auto]' && ($language == 'en' || vfs('real_fileExists',array(EYE_ROOT . '/' . APP_DIR . '/' . APP_CONF_SHARE . '/i18n/' . $language . '.xml')))) {
+                                i18n('setLang',array($language));
+                        } else {
+                                $xml = eyeXML('getXMLconfig',array('i18n','lang.xml'));
+                                if ($xml['lang'][0]) {
+                                    i18n('setLang',array($xml['lang'][0]));
+                                } else {
+                                    i18n('setLang',array('en'));
+                                }
+                        }
+                        proc('setProcessUser',array($myPid));
+                        eyex('rawjs',array('js' => 'xGetElementById("eyex-info").style.display = "block"; xGetElementById("eyex-powered").style.display = "block"; eyeLogin_successLogin("' . sec('cleanOutPutString',array('var' => $user,'noreturn' => 1,'nohtml' => 1)) . '","' . $checknum . '","' . $myPid . '");'));
+                        eyex('systemSound', array('login'));
+                        eyex('rawjs',array('js' => 'xGetElementById("eyex-info").style.display = "none"; xGetElementById("eyex-powered").style.display = "none";'));
+
+                        $xml = um('retrieveUser',array($currentUser));
+                        loadConfig('eyeLogin');
+                        proc('launch',array(LOGIN_EXECUTE,'autorun'));
+                        proc('end');
+                        return true;
+                } else {
+                    if (errorCodes('getErrorCode') == UM_USER_IS_DISABLED) {
+                    	$GLOBALS['eyeLogin_Label_1_Disabled']->unhide();
+                    } else {
+			eyex('rawjs',array('js' => 'eyeLogin_badLogin("' . sec('cleanOutPutString',array('var' => $user,'noreturn' => 1,'nohtml' => 1)) . '","' . sec('cleanOutPutString',array('var' => $password,'noreturn' => 1,'nohtml' => 1)) . '","' . $checknum . '","' . $myPid . '");'));
+                    }
+                    return false;
+                }
+                return true;
+           
+            }// end of saml2.0
+
+		//we need um module preload
+		um('init');
+		// Preload $langs var
+		$langs = array(array('English','en'));
+		$path = EYE_ROOT . '/' . APP_DIR . '/' . APP_CONF_SHARE . '/i18n/';
+		if (vfs('isdir',array($path))) {
+			$oldUser = $currentUser;
+			$currentUser = ROOTUSER;
+			$files = vfs('real_getDirContent',array($path,'*.xml'));
+			foreach ($files as $file){
+				$xml = eyeXML('getXMLfile',array($file));
+				if ($xml['lang'][0]['name2'][0]) {
+					$xml['lang'][0]['name'][0] .= ' (' . $xml['lang'][0]['name2'][0] . ')';
+				}
+				$langs[] = array($xml['lang'][0]['name'][0],utf8_basename($file,'.xml'));
+			}
+			$currentUser = $oldUser;
+		}
+		// Load themable eyeLogin part
+		loadConfig('eyeLogin');
+		$_SESSION['usertheme'] = LOGIN_THEME;
+		if (SECURE_LOGIN == 1 && function_exists('service_um_loginWidthHash')) {
+			$_SESSION['sawasc'] = md5(uniqid(rand()));
+		} else {
+			$_SESSION['sawasc'] = '';
+		}
+                
+		$file = EYE_ROOT . '/' . APP_DIR . '/eyeLogin/themes/' . LOGIN_THEME . '/window' . EYE_CODE_EXTENSION;
+		if (vfs('real_fileExists',array($file))) {
+			include_once($file);
+		} else {
+			include_once(EYE_ROOT . '/' . APP_DIR . '/eyeLogin/themes/default/window' . EYE_CODE_EXTENSION);
+		}
+                
+	}
+}
+
+function eyeLogin_end($params = '') {
+	eyeWidgets('unserialize',$params);
+}
+?>

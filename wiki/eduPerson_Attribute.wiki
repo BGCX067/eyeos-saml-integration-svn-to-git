@@ -1,0 +1,22 @@
+== eduPerson Attribute Definitions ==
+
+eduPersonPrimaryAffiliation (SAML 2:urn:oid:1.3.6.1.4.1.5923.1.1.1.6)
+
+eduPersonPrimaryAffiliation specifies the person's PRIMARY relationship to the institution in broad categories such as student, faculty, staff, alum, etc.
+
+eduPersonPrimaryAffiliation is a single-valued string attribute.
+
+ * faculty
+ * staff
+ * employee
+ * student
+ * member
+ * affiliate
+
+
+
+=== Reference ===
+
+[http://middleware.internet2.edu/eduperson/docs/internet2-mace-dir-eduperson-200604.html]
+
+Identity Management Attribute Information, [http://www.educause.edu/fidm/attributes]
